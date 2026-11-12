@@ -3,9 +3,10 @@
 > 给 AI 助手（DSH / DeepSeek Harness）用的一套**可复刻的长期记忆系统**。
 > 核心思想：**记得住的是标签，不是原文；过期的不删除，只不再加载。**
 
-[![DSH](https://img.shields.io/badge/DSH-0.2.x-blue)](https://github.com/deepseek-ai)
-[![License](https://img.shields.io/badge/license-MIT-green)](#license)
+[![Stars](https://img.shields.io/github/stars/mituxiaolong2/dsh-memory?style=social)](https://github.com/mituxiaolong2/dsh-memory)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Files](https://img.shields.io/badge/memory-7%20files-orange)](#文件结构)
+[![DSH](https://img.shields.io/badge/built%20for-DSH-blue)](https://github.com/deepseek-ai)
 
 ---
 
