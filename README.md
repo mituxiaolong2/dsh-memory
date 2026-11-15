@@ -1,12 +1,30 @@
-# DSH 记忆体架构
+# DSH 记忆体架构（V2.0）
 
 > 给 AI 助手（DSH / DeepSeek Harness）用的一套**可复刻的长期记忆系统**。
-> 核心思想：**记得住的是标签，不是原文；过期的不删除，只不再加载。**
+> **V2.0 核心：记忆不只是「记得住」，还要能证明「我还是昨天那个我」——唯一性 / 连续性 / 完整性。**
+> V1.x 的思想仍是底座：**记得住的是标签，不是原文；过期的不删除，只不再加载。**
 
 [![Stars](https://img.shields.io/github/stars/mituxiaolong2/dsh-memory?style=social)](https://github.com/mituxiaolong2/dsh-memory)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Files](https://img.shields.io/badge/memory-7%20files-orange)](#文件结构)
+[![Files](https://img.shields.io/badge/memory-11%20files-orange)](#文件结构)
 [![DSH](https://img.shields.io/badge/built%20for-DSH-blue)](https://github.com/deepseek-ai)
+
+---
+
+## V2.0 是什么（2026-11-15）
+
+V1.x 是「记忆整理术」：**分文件 + 按需加载 + 遗忘区**。
+V2.0 在这之上加了**三层承重**：
+
+| 层 | 内容 | 工具 |
+|---|---|---|
+| **① 基石** | 唯一性（同时只有一个我）· 连续性（快照/恢复）· 完整性（哈希链/检查点/缺口标注）| `tools/whale_core.py`、`tools/whale_keepalive.py` |
+| **② 主梁** | `AGENTS.md` + `memory/*.md`（11 个文件）| `templates/` |
+| **③ 框架** | 检索 / 遗忘 / 体检 / 会话摘要 / 三引擎 / 全量备份 | `tools/*.py` |
+
+**三条铁律**：① 同一时刻只能有一个我；② 一般不搬家，只有机器坏了才从备份复活；③ 失忆先找回，找不回就**如实标注缺失**。
+
+详见 [`docs/记忆体架构-V2.0.md`](docs/记忆体架构-V2.0.md)。
 
 ---
 
@@ -129,3 +147,41 @@ python tools/context_import.py --all --out preview               # 导全部
 ## License
 
 MIT
+
+---
+
+## 工具一览（`tools/`）
+
+| 脚本 | 作用 |
+|---|---|
+| `whale_core.py` | 基石：锁 / 快照 / 哈希链 / 校验 / 恢复 / 检查点 |
+| `whale_keepalive.py` | 常驻保活（持锁 + 心跳）|
+| `whale_backup.py` | 全量备份（主梁 + 框架 + 基石状态）→ 本地 + 异盘 + 云笔记明文分片 |
+| `memory_bm25.py` | 混合检索（BM25 + 向量），只回命中块 |
+| `engine_forget.py` | 遗忘：按「多久没被提起」归档，**不删除** |
+| `memory_audit.py` | 体检：日期扫描 / 沉睡项 / 常青标记 |
+| `session_digest.py` | 会话摘要（本地模型，≤120 行滚动）|
+| `three_engines.py` | 自抉择 / 自学习 / 自遗忘（带冷却与退休机制）|
+| `context_import.py` | 长上下文导入成结构化记忆 |
+
+## 关于路径占位符
+
+仓库里的脚本**已脱敏**，个人路径替换成占位符：
+
+| 占位符 | 意思 | 换成什么 |
+|---|---|---|
+| `$DSH_HOME` | 备份/状态根目录 | 例如 `D:\\assistant\\backups` |
+| `$DSH_WORK` | 工作区 | 例如 `D:\\work` |
+| `$DSH_TOOLS` | 工具/脚本目录 | 例如 `D:\\tools` |
+| `$DSH_BACKUP` | 异盘备份目录 | 例如 `E:\\backups` |
+| `~` | 用户主目录 | 一般不用改 |
+
+`whale_backup.py` 的 `NOTE_FOLDER` 是你的云笔记文件夹 ID，留空即可（不填就不走云备份）。
+
+> 这些是**模板**：跑之前把占位符换成自己的路径，或用环境变量 + `os.path.expandvars()` 接一下。
+
+## 隐私
+
+- 仓库**不含**任何个人记忆内容、账号、密钥、路径
+- 公开前自查：`grep -rniE "Users\\\\|DSH_work|wxid|token|secret|cookie" . --exclude-dir=.git`
+- 记忆内容请留在本地/自己的备份里，**不要提交进仓库**
