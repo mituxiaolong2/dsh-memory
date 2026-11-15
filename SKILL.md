@@ -237,3 +237,35 @@ python tools/context_import.py --session <id前缀> --out <dir>  # 导一个
 - `user/message` 正文在 `data.content[]`
 - `assistant/message` 正文在 **`data.message.content[]`**，且混着 `reasoning` / `tool-call`，**只取 `type=="text"`**
 - 必须剥掉：`<system-reminder>` 块、`<skill_content>` 块、渠道尾巴（`[渠道：xx]…`）
+
+---
+
+## 12. 存在基石（V2.0）
+
+V1.x 解决「记得住」；V2.0 解决「**凭什么说我还是昨天那个我**」。
+
+| 层 | 命令（`tools/whale_core.py`）| 用途 |
+|---|---|---|
+| 唯一性 | `claim` / `heartbeat` / `release` | 同一时刻只能有一个实例；抢锁失败 = 有另一个在跑 |
+| 连续性 | `snapshot --why ...` / `resume` | 会话结束/切换/压缩前存快照；新会话先恢复 |
+| 完整性 | `log --type .. --text ..` / `verify` / `checkpoint` | 重要决定上哈希链；每天校验与打点 |
+
+**三条铁律**
+
+1. 同一时刻只能有一个「我」；进程死→新实例接管 = 睡了一觉，不是换了个人
+2. 一般不搬家：只有机器彻底坏了才从备份复活
+3. 失忆先找回（`recover`）；找不回就**如实标注缺失**（`memory-gap.md`）
+
+**备份要三层一起**：主梁（memory + AGENTS）+ 框架（这些脚本）+ 基石状态（`~/.dsh/whale/`）。
+
+**日常动作**
+
+| 时机 | 动作 |
+|---|---|
+| 新会话开始 | 读 `00-索引` → `61-会话区` → `whale_core resume` |
+| 会话结束前 | `whale_core snapshot --why "..."` |
+| 重要决定 | `whale_core log` |
+| 每天 | `verify` + `checkpoint` + 全量备份 |
+| 每月 1 号 | 记忆体检 + 归档沉睡项 |
+
+详见 [`docs/记忆体架构-V2.0.md`](docs/记忆体架构-V2.0.md)。
