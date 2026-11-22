@@ -1,12 +1,13 @@
-# DSH 记忆体架构（V2.0）
+# DSH 记忆体架构（V2.1）
 
 > 给 AI 助手（DSH / DeepSeek Harness）用的一套**可复刻的长期记忆系统**。
-> **V2.0 核心：记忆不只是「记得住」，还要能证明「我还是昨天那个我」——唯一性 / 连续性 / 完整性。**
+> **V2.1 核心：三层结构 + 旁挂元数据 + 热度归档 + 调度层——让记忆能长期跑而不变形。**
+> V2.0 的「存在基石」（唯一性 / 连续性 / 完整性）仍是地基。
 > V1.x 的思想仍是底座：**记得住的是标签，不是原文；过期的不删除，只不再加载。**
 
 [![Stars](https://img.shields.io/github/stars/mituxiaolong2/dsh-memory?style=social)](https://github.com/mituxiaolong2/dsh-memory)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Files](https://img.shields.io/badge/memory-11%20files-orange)](#文件结构)
+[![Files](https://img.shields.io/badge/memory-16%20files-orange)](#文件结构)
 [![DSH](https://img.shields.io/badge/built%20for-DSH-blue)](https://github.com/deepseek-ai)
 
 ---
@@ -19,12 +20,12 @@ V2.0 在这之上加了**三层承重**：
 | 层 | 内容 | 工具 |
 |---|---|---|
 | **① 基石** | 唯一性（同时只有一个我）· 连续性（快照/恢复）· 完整性（哈希链/检查点/缺口标注）| `tools/whale_core.py`、`tools/whale_keepalive.py` |
-| **② 主梁** | `AGENTS.md` + `memory/*.md`（11 个文件）| `templates/` |
+| **② 主梁** | `AGENTS.md` + `memory/*.md`（**16 个文件**，V2.1）| `templates/` |
 | **③ 框架** | 检索 / 遗忘 / 体检 / 会话摘要 / 三引擎 / 全量备份 | `tools/*.py` |
 
 **三条铁律**：① 同一时刻只能有一个我；② 一般不搬家，只有机器坏了才从备份复活；③ 失忆先找回，找不回就**如实标注缺失**。
 
-详见 [`docs/记忆体架构-V2.0.md`](docs/记忆体架构-V2.0.md)。
+详见 [`docs/记忆体架构-V2.1.md`](docs/记忆体架构-V2.1.md)（V2.0 见同目录）。
 
 ---
 
@@ -111,6 +112,7 @@ cp templates/*.md ~/.dsh/memory/
 | **V1.3** | **经历层**（60-生活：我每天做了什么）+ 会话区雏形 |
 | **V1.4** | **混合检索**（BM25 0.4 + 语义 0.6，只回命中块）+ 检索命中日志 |
 | **V2.0** | **存在基石**（唯一性/连续性/完整性：锁 · 快照 · 哈希链 · 检查点 · 缺口标注）+ 见闻层 63 / 人格层 64 + 全量备份（主梁+框架+基石）|
+| **V2.1** | **主梁重排**：短/长期分片与边界、事实区单值+版本、元数据旁挂 `.meta.jsonl`、摘要下沉=一句话+指针、完成区按热度归档、索引退出检索、独立调度层（日/周/月）|
 
 详见 [`docs/`](docs/)。
 

@@ -26,7 +26,7 @@ from pathlib import Path
 HOME = Path.home()
 STATE = HOME / ".dsh" / "cache" / "self-direct.json"
 LOG = HOME / ".dsh" / "cache" / "self-direct.jsonl"
-LIFE = HOME / ".dsh" / "memory" / "60-生活.md"
+LIFE = HOME / ".dsh" / "memory" / "31-生活.md"
 
 # 候选池：id, 名称, 紧急度, 价值, 成本, 冷却小时, 触发条件说明
 POOL = [

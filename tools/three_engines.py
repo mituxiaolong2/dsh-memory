@@ -19,7 +19,6 @@ three_engines.py —— 三自引擎 v1 调度器（2026-11-14）
 from __future__ import annotations
 
 import argparse
-import os
 import json
 import subprocess
 import sys
@@ -27,12 +26,30 @@ import time
 from datetime import date, datetime
 from pathlib import Path
 
+# ---- 2026-11-17 按需拉起本地模型（游戏时延后，空闲自动停）----
+def _ensure_model() -> None:
+    """确保本地模型可用；显存被游戏占用时直接抛错跳过，不要死等。"""
+    try:
+        import sys as _sys
+        _sys.path.insert(0, r"E:\DSH_work\5.插件\dsh-jingjinglive-鲸鲸生活\记忆体\tools")
+        import model_gate  # noqa: WPS433
+        rc = model_gate.ensure()
+        if rc == 3:
+            raise RuntimeError("显存被占用（在玩游戏），本地模型本次跳过")
+        model_gate.touch()
+    except RuntimeError:
+        raise
+    except Exception:
+        pass  # gate 本身坏了不该拖垮主流程
+
+
+
 HOME = Path.home()
 CACHE = HOME / ".dsh" / "cache"
 WEIGHTS = CACHE / "self-learn.json"
 HISTORY = CACHE / "self-direct.jsonl"
-LIFE = HOME / ".dsh" / "memory" / "60-生活.md"
-LAUNCH = Path(os.path.expandvars(r"$DSH_TOOLS\launcher"))
+LIFE = HOME / ".dsh" / "memory" / "31-生活.md"
+from _paths import TOOLS_DIR as LAUNCH  # noqa: E402
 PY = sys.executable or "python"
 
 POOL = [
@@ -114,13 +131,14 @@ def t_disk_health() -> tuple[bool, str]:
 
 def t_memory_audit() -> tuple[bool, str]:
     rc, out = run([PY, "-X", "utf8", str(LAUNCH / "memory_audit.py"), "--no-llm"])
-    report = Path(os.path.expandvars(r"$DSH_WORK\产出文档")) / f"记忆体检-{date.today()}.md"
+    from _paths import REPORTS_DIR  # noqa: E402
+    report = REPORTS_DIR / f"记忆体检-{date.today()}.md"
     ok = rc == 0 and report.exists()
     return ok, (f"报告已生成 {report.name}" if ok else "报告没生成")
 
 
 def t_doc_index() -> tuple[bool, str]:
-    root = Path(os.path.expandvars(r"$DSH_WORK\产出文档"))
+    root = REPORTS_DIR
     rows = [p for p in root.rglob("*") if p.is_file() and p.name not in ("索引.md", "index.md")]
     lines = ["# 产出文档索引", "", f"> 自动生成 {datetime.now():%Y-%m-%d %H:%M} · {len(rows)} 个文件", ""]
     for p in sorted(rows):
@@ -139,6 +157,7 @@ def _local_summary(text: str, prompt_prefix: str, max_tokens: int = 160) -> str 
         "max_tokens": max_tokens, "temperature": 0.3,
     }).encode("utf-8")
     try:
+        _ensure_model()
         req = urllib.request.Request("http://127.0.0.1:8095/v1/chat/completions", data=body,
                                      headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=120) as r:
@@ -228,7 +247,7 @@ def learn(hist: list[dict], w: dict) -> list[str]:
     return notes
 
 
-BALANCE_GUARD = 10.0   # 余额低于这个数，只允许体检类任务（遵从用户的余额纪律）
+BALANCE_GUARD = 10.0   # 余额低于这个数，只允许体检类任务（遵从主人的余额纪律）
 
 
 def balance() -> float | None:

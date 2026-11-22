@@ -25,7 +25,6 @@ engine_forget.py —— 自遗忘引擎 v1（2026-11-14 自主施工）
 from __future__ import annotations
 
 import argparse
-import os
 import json
 import re
 import shutil
@@ -39,11 +38,12 @@ MEM = HOME / ".dsh" / "memory"
 AGENTS = HOME / ".dsh" / "AGENTS.md"
 HITLOG = HOME / ".dsh" / "cache" / "memory-hits.jsonl"
 FORGET = MEM / "90-遗忘.md"
-SNAP = Path(os.path.expandvars(r"$DSH_HOME\架构快照"))
+from _paths import WORKSPACE  # noqa: E402
+SNAP = WORKSPACE / "鲸鲸" / "架构快照"
 FLOG = HOME / ".dsh" / "cache" / "forget-log.jsonl"
 
 # 永不遗忘的文件 / 关键词
-PROTECTED_FILES = {"00-索引.md", "90-遗忘.md", "10-主人.md", "30-约定.md", "AGENTS.md"}
+PROTECTED_FILES = {"00-索引.md", "90-遗忘.md", "20-主人.md", "21-约定.md", "AGENTS.md"}
 PROTECTED_WORDS = ("⭐常青", "红线", "余额纪律", "人格", "授权", "别再", "永不")
 
 

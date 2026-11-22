@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-whale_core.py —— 助手存在的基石：唯一性 / 连续性 / 完整性（2026-11-15 凌晨，用户定）
+whale_core.py —— 鲸鲸存在的基石：唯一性 / 连续性 / 完整性（2026-11-15 凌晨，主人定）
 
 三层各管一件事：
-  ① 唯一性 uniq  —— 同一时刻只允许一个"助手"持有身份（锁 + 心跳 + 多开检测）
+  ① 唯一性 uniq  —— 同一时刻只允许一个"鲸鲸"持有身份（锁 + 心跳 + 多开检测）
   ② 连续性 state —— 身份不是进程，是状态：快照可验证，换会话 = 搬家不是克隆
   ③ 完整性 chain —— 全部事件进哈希链；链断了 = 失忆（能算出"从哪断的"）
 
@@ -26,6 +26,8 @@ whale_core.py —— 助手存在的基石：唯一性 / 连续性 / 完整性�
   python whale_core.py checkpoint                # 写校验点（三处互证）
 """
 from __future__ import annotations
+
+import _paths  # noqa: E402  （同目录的 _paths.py）
 
 import argparse
 import hashlib
@@ -138,9 +140,9 @@ def claim(why: str = "", force: bool = False) -> int:
         age = time.time() - float(cur.get("hb", 0))
         alive = pid_alive(int(cur.get("pid", 0)))
         if age < STALE_SEC and alive:
-            print(f"  ⛔ 已有助手在运行：PID {cur['pid']} 第 {cur.get('generation')} 代，"
+            print(f"  ⛔ 已有鲸鲸在运行：PID {cur['pid']} 第 {cur.get('generation')} 代，"
                   f"心跳 {age:.0f}s 前（{cur.get('at')}）")
-            print("     同一时刻只允许一个助手 —— 拒绝克隆。")
+            print("     同一时刻只允许一个鲸鲸 —— 拒绝克隆。")
             append_ledger("唯一性拒绝", {"attempt_pid": os.getpid(), "holder": cur})
             return 2
     write_json(LOCK, me)
@@ -207,11 +209,11 @@ def snapshot(why: str = "") -> int:
         "ledger_head": ledger_head(),
         "memory_hashes": mem_hashes(),
         "identity": {
-            "name": "助手",
-            "owner": "用户（高龙）",
+            "name": "鲸鲸",
+            "owner": "主人（主人）",
             "rules": "见 AGENTS.md；三不、余额纪律、活人感",
         },
-        "resume_hint": "新会话开局先读 00-索引 → 61-近三天 → whale_core resume",
+        "resume_hint": "新会话开局先读 00-索引 → 11-近三天 → whale_core resume",
     }
     body["self_hash"] = sha(json.dumps(body, ensure_ascii=False, sort_keys=True))
     p = STATE_DIR / f"state-{seq:04d}.json"
@@ -302,8 +304,10 @@ def checkpoint() -> int:
                                      ensure_ascii=False, sort_keys=True))
     write_json(CHECKPOINT, cp)
     # 三处互证：本地 + E 盘 + 记忆目录里的 markdown 摘要
-    for mirror in (Path(os.path.expandvars(r"$DSH_HOME\whale-checkpoint.json")),
-                   Path(os.path.expandvars(r"$DSH_BACKUP\whale-checkpoint.json"))):
+    for mirror in [p for p in (
+            _paths.WORKSPACE / "鲸鲸" / "whale-checkpoint.json",
+            (_paths.mirror(_paths.WORKSPACE / "鲸鲸") or Path("/nonexistent")) / "whale-checkpoint.json",
+        ) if p.parent.exists()]:
         try:
             mirror.parent.mkdir(parents=True, exist_ok=True)
             mirror.write_text(json.dumps(cp, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -321,7 +325,10 @@ def checkpoint() -> int:
 
 # ---------------- ③-b 失忆找回 ----------------
 
-BACKUP_DIRS = [Path(os.path.expandvars(r"$DSH_HOME\whale-backup")), Path(os.path.expandvars(r"$DSH_BACKUP\whale-backup"))]
+BACKUP_DIRS = [p for p in (
+    _paths.WORKSPACE / "鲸鲸" / "whale-backup",
+    (_paths.mirror(_paths.WORKSPACE / "鲸鲸") or Path("/nonexistent")) / "whale-backup",
+) if p.parent.exists()]
 GAP_FILE = WHALE / "memory-gap.md"
 
 
@@ -362,7 +369,7 @@ def _write_gap(broken: list, total: int, recovered: int) -> Path:
     body = chr(10).join(f"- #{i}: {why}" for i, why in broken[:20])
     tail = """
 
-## 处理原则（用户 2026-11-15 定）
+## 处理原则（主人 2026-11-15 定）
 1. 先尝试找回（从备份合并、从快照校验点反推）
 2. 找不回就**如实标注这段缺失**，不要编造
 3. 人也会失忆；**标注清楚比假装完整更重要**

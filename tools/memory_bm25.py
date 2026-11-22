@@ -111,7 +111,9 @@ def split_chunks(path: Path) -> list[dict]:
     return out
 
 
-SKIP_DEFAULT = {"90-遗忘.md"}
+SKIP_DEFAULT = {"90-遗忘.md", "00-索引.md"}   # 遗忘区不进常规检索；索引是导航层，也不进（避免标题词抢位）
+LONG_TERM_PREFIX = ("70-", "71-", "90-", "91-", "92-")  # 长期层：完成区 / 归档区 / 遗忘区
+RECALL_LOG = HOME / ".dsh" / "cache" / "memory-recall.jsonl"
 
 
 def collect_chunks(include_forgotten: bool = False) -> list[dict]:
@@ -224,7 +226,34 @@ def main() -> int:
     ap.add_argument("--all", action="store_true", help="包含 90-遗忘.md")
     ap.add_argument("--hybrid", action="store_true", help="（已默认开启）BM25 + 向量语义混合")
     ap.add_argument("--bm25-only", action="store_true", help="只用 BM25，不加载向量模型")
+    ap.add_argument("--recall", action="store_true",
+                    help="回忆模式：只用关键词去长期层（70/71/90/91/92）高置信匹配，触发就记日志")
+    ap.add_argument("--recall-threshold", type=float, default=3.0, help="回忆触发的最低分（默认 3.0）")
     a = ap.parse_args()
+
+    if a.recall and a.query:
+        idx = load_index(force=a.rebuild, include_forgotten=True)
+        results = [r for r in search(idx, a.query, max(a.top, 5), hybrid=False)
+                   if str(r["file"]).startswith(LONG_TERM_PREFIX)]
+        best = results[0] if results else None
+        hit = bool(best and float(best["score"]) >= a.recall_threshold)
+        import json as _json, time as _time
+        RECALL_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with RECALL_LOG.open("a", encoding="utf-8") as fh:
+            fh.write(_json.dumps({
+                "ts": int(_time.time()), "q": a.query, "fired": hit,
+                "file": best["file"] if best else None,
+                "line": best.get("line") if best else None,
+                "score": round(float(best["score"]), 3) if best else None,
+                "threshold": a.recall_threshold,
+            }, ensure_ascii=False) + chr(10))
+        if not hit:
+            print(f"  回忆未触发（最高分 {float(best['score']):.2f} < {a.recall_threshold}）" if best
+                  else "  回忆未触发（长期层没有相关条目）")
+            return 1
+        print(f"  💭 回忆触发：{best['file']}:{best.get('line')}  分数 {float(best['score']):.2f}")
+        print("  " + best["text"][:300].replace("\n", " "))
+        return 0
 
     idx = load_index(force=a.rebuild, include_forgotten=a.all)
 

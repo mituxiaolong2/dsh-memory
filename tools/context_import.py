@@ -28,7 +28,7 @@ from pathlib import Path
 
 import compression.zstd as zstd
 
-SESSIONS_ROOT = Path.home() / ".dsh" / "sessions"
+from _paths import SESSIONS_DIR as SESSIONS_ROOT  # noqa: E402
 
 # 噪声前缀：这些内容不是"记忆"
 NOISE_PREFIXES = (
@@ -49,11 +49,11 @@ LESSON_KW = ["报错", "失败", "错误", "踩坑", "坑", "异常", "exit code
 MILESTONE_KW = ["上线", "立项", "发布", "第一天", "里程碑", "搞定了", "创建了"]
 
 CATEGORY_TITLES = {
-    "10-主人.md": "关于这个人（从会话里抽取）",
-    "20-项目与工作区.md": "项目与状态（从会话里抽取）",
-    "30-约定.md": "约定与红线（从会话里抽取）",
-    "40-教训.md": "教训（从会话里抽取）",
-    "50-时间线.md": "时间线（从会话里抽取）",
+    "20-主人.md": "关于这个人（从会话里抽取）",
+    "40-项目.md": "项目与状态（从会话里抽取）",
+    "21-约定.md": "约定与红线（从会话里抽取）",
+    "50-教训.md": "教训（从会话里抽取）",
+    "30-时间线.md": "时间线（从会话里抽取）",
     "90-遗忘.md": "未归类 / 过期内容（从会话里抽取）",
 }
 
@@ -141,18 +141,18 @@ def classify(role: str, text: str) -> str:
     if role == "assistant":
         # 助手的产出多数是"做了什么/踩了什么坑"
         if any(k in text for k in LESSON_KW):
-            return "40-教训.md"
-        return "20-项目与工作区.md"
+            return "50-教训.md"
+        return "40-项目.md"
     # 用户
     if any(k in text for k in CONV_KW):
-        return "30-约定.md"
+        return "21-约定.md"
     if any(k in text for k in SELF_KW):
-        return "10-主人.md"
+        return "20-主人.md"
     if any(k in text for k in MILESTONE_KW):
-        return "50-时间线.md"
+        return "30-时间线.md"
     if len(re.sub(r"\s+", "", text)) < 12:
         return "90-遗忘.md"
-    return "20-项目与工作区.md"
+    return "40-项目.md"
 
 
 ACK_WORDS = ("好的", "收到", "明白了", "已办完", "已完成", "完成了", "OK", "ok")

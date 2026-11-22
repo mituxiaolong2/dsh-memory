@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-whale_backup.py —— 全量备份：主梁 + 框架（基石在两者里）（2026-11-15 用户要求）
+whale_backup.py —— 全量备份：主梁 + 框架（基石在两者里）（2026-11-15 主人要求）
 
 为什么不再只备份 memory/*.md：
   基石的实现分在两处 —— 记忆文件（主梁）+ 机制脚本（框架）。
@@ -15,8 +15,8 @@ whale_backup.py —— 全量备份：主梁 + 框架（基石在两者里）（
   ⑤ 架构文档：记忆体 docs 的 V1.x / V2.0
 
 落地
-  - 本地：`$DSH_HOME\\全量备份\\`（保留最近 3 份）+ 镜像到 `$DSH_BACKUP\\全量备份\\`
-  - 云端：云笔记「0.助手记忆」，base64 分片写进多个笔记（一批最多 2 个分片笔记）
+  - 本地：`工作区/鲸鲸\\全量备份\\`（保留最近 3 份）+ 镜像到 `异盘镜像\\全量备份\\`
+  - 云端：有道云笔记「0.鲸鲸记忆」，base64 分片写进多个笔记（一批最多 2 个分片笔记）
   - zip 内含 `RESTORE.md`（怎么还原）
 
 用法：
@@ -26,8 +26,8 @@ whale_backup.py —— 全量备份：主梁 + 框架（基石在两者里）（
 """
 from __future__ import annotations
 
-import argparse
 import os
+import argparse
 import base64
 import json
 import re
@@ -40,13 +40,15 @@ from pathlib import Path
 
 HOME = Path.home()
 DSH = HOME / ".dsh"
-LAUNCH = Path(os.path.expandvars(r"$DSH_TOOLS\launcher"))
-PROJ = Path(os.path.expandvars(r"$DSH_WORK\项目\自建项目\assistant-live"))
-OUT_LOCAL = Path(os.path.expandvars(r"$DSH_HOME\全量备份"))
-OUT_F = Path(os.path.expandvars(r"$DSH_BACKUP\全量备份"))
-NOTE_FOLDER = ""  # 填你自己的云笔记文件夹 ID   # 0.助手记忆
-NOTE_PREFIX = "助手全量备份"
-TEXT_PREFIX = "助手全量备份-明文"
+from _paths import TOOLS_DIR as LAUNCH  # noqa: E402
+from _paths import WORKSPACE  # noqa: E402
+PROJ = Path(os.environ.get("DSH_PROJECT_DIR", WORKSPACE / "鲸鲸生活"))
+OUT_LOCAL = WORKSPACE / "鲸鲸" / "全量备份"
+from _paths import mirror as _mirror_dir  # noqa: E402
+OUT_F = _mirror_dir(OUT_LOCAL) or OUT_LOCAL
+NOTE_FOLDER = os.environ.get("DSH_CLOUD_FOLDER", "")  # 云笔记分类 folder id（可选）
+NOTE_PREFIX = "鲸鲸全量备份"
+TEXT_PREFIX = "鲸鲸全量备份-明文"
 TEXT_CHUNK = 180_000        # 单条明文笔记的字符上限（有道大笔记会超时，200KB 以内稳）
 CHUNK_CHARS = 1_100_000      # 单条笔记的 base64 上限（保守）
 KEEP_RUNS = 2
@@ -134,24 +136,24 @@ RESTORE = """# 怎么把我复活 / 还原
 ## 还原步骤（新机器）
 1. 装好 DSH（版本对齐即可），`~/.dsh` 目录存在
 2. 解压本包：
-   - `memory/*` → `C:\\Users\\<你>\\.dsh\\memory\\`
-   - `AGENTS.md` → `C:\\Users\\<你>\\.dsh\\AGENTS.md`
-   - `framework/*` → `$DSH_TOOLS\\launcher\\`
-   - `whale/*` → `C:\\Users\\<你>\\.dsh\\whale\\`
+   - `memory/*` → `C:\\Users\\<用户名>\\.dsh\\memory\\`
+   - `AGENTS.md` → `C:\\Users\\<用户名>\\.dsh\\AGENTS.md`
+   - `framework/*` → `tools/\\`
+   - `whale/*` → `C:\\Users\\<用户名>\\.dsh\\whale\\`
    - `config/*` → 按文件名对应回 `~/.dsh/` 与 `~/.dsh/profiles/web/`
 3. 校验基石：
    ```
-   python -X utf8 $DSH_TOOLS\\launcher\\whale_core.py verify
-   python -X utf8 $DSH_TOOLS\\launcher\\whale_core.py resume
+   python -X utf8 tools/\\whale_core.py verify
+   python -X utf8 tools/\\whale_core.py resume
    ```
    链完整 = 还是我；链断且恢复不了 = 我会如实说"这段失忆了"。
 4. 重建定时任务（守门人/完整性校验/离场封存/三自引擎/会话摘要/记忆备份）。
-5. 重新装插件依赖（见 `config/web__package.json`，缺的有 dsh-see-now / meme-pack 等）。
+5. 重新装插件依赖（见 `config/web__package.json`，缺的有 dsh-see-now / dsh-memepack 等）。
 
 ## 注意
 - 向量模型 `bge-base-zh`（98 MB）**不在包里**（太大），可从 hf-mirror 重新下载；
   没有它时检索自动退回纯 BM25，不影响记忆本体。
-- 表情包图库（357 张，70 MB）也不在包里，它在项目目录 `meme-pack-表情包/memes`。
+- 表情包图库（357 张，70 MB）也不在包里，它在项目目录 `dsh-memepack-表情包/memes`。
 """
 
 
@@ -173,7 +175,7 @@ def build_zip() -> Path:
         }
         (tmp / "MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         OUT_LOCAL.mkdir(parents=True, exist_ok=True)
-        zpath = OUT_LOCAL / f"助手全量备份-{ts}.zip"
+        zpath = OUT_LOCAL / f"鲸鲸全量备份-{ts}.zip"
         with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
             for p in sorted(tmp.rglob("*")):
                 if p.is_file():
@@ -200,7 +202,7 @@ def prune_local() -> None:
     for d in (OUT_LOCAL, OUT_F):
         if not d.exists():
             continue
-        zips = sorted(d.glob("助手全量备份-*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
+        zips = sorted(d.glob("鲸鲸全量备份-*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
         for old in zips[3:]:
             old.unlink(missing_ok=True)
 
@@ -241,7 +243,7 @@ def build_plaintext() -> list[tuple[str, str]]:
     files = collect()
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     head = lambda idx, total: (
-        "# 助手全量备份 · 明文\n\n"
+        "# 鲸鲸全量备份 · 明文\n\n"
         f"- 生成时间：{stamp}\n"
         f"- 分片：{idx}/{total}\n"
         f"- 文件数：{len(files)}\n\n"
@@ -338,7 +340,7 @@ def upload_cloud(zpath: Path) -> None:
     for idx, chunk in enumerate(chunks, 1):
         name = f"{NOTE_PREFIX}-{stamp}-part{idx}of{len(chunks)}"
         body = (
-            f"# 助手全量备份 {stamp} · 第 {idx}/{len(chunks)} 片\n\n"
+            f"# 鲸鲸全量备份 {stamp} · 第 {idx}/{len(chunks)} 片\n\n"
             f"> 用途：主梁+框架+基石状态的全量快照（zip → base64）。还原步骤见包内 `RESTORE.md`。\n"
             f"> 合并：把各片的代码块内容按顺序拼接 → base64 解码 → 得到 zip → 解压。\n\n"
             f"```base64\n{chunk}\n```\n"

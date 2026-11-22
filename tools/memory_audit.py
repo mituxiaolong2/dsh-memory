@@ -18,7 +18,6 @@ memory_audit.py —— 记忆体检 / 自遗忘引擎 v0（2026-11-14 自主时�
 from __future__ import annotations
 
 import argparse
-import os
 import json
 import re
 import sys
@@ -27,10 +26,29 @@ from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
 
+# ---- 2026-11-17 按需拉起本地模型（游戏时延后，空闲自动停）----
+def _ensure_model() -> None:
+    """确保本地模型可用；显存被游戏占用时直接抛错跳过，不要死等。"""
+    try:
+        import sys as _sys
+        from _paths import TOOLS_DIR  # noqa: E402
+        _sys.path.insert(0, str(TOOLS_DIR))
+        import model_gate  # noqa: WPS433
+        rc = model_gate.ensure()
+        if rc == 3:
+            raise RuntimeError("显存被占用（在玩游戏），本地模型本次跳过")
+        model_gate.touch()
+    except RuntimeError:
+        raise
+    except Exception:
+        pass  # gate 本身坏了不该拖垮主流程
+
+
+
 HOME = Path.home()
 MEM = HOME / ".dsh" / "memory"
 AGENTS = HOME / ".dsh" / "AGENTS.md"
-OUT_DIR = Path(os.path.expandvars(r"$DSH_WORK\产出文档"))
+from _paths import REPORTS_DIR as OUT_DIR  # noqa: E402
 HITLOG = HOME / ".dsh" / "cache" / "memory-hits.jsonl"   # 检索器写的「谁被引用过」
 ENGINE = "http://127.0.0.1:8095/v1/chat/completions"
 MODEL = "bonsai27b"
@@ -86,6 +104,7 @@ def ask_local(prompt: str, max_tokens: int = 220) -> str:
         "max_tokens": max_tokens,
         "temperature": 0.3,
     }).encode("utf-8")
+    _ensure_model()
     req = urllib.request.Request(ENGINE, data=body, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=300) as r:
         return json.loads(r.read().decode())["choices"][0]["message"]["content"].strip()
